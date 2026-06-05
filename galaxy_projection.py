@@ -1,5 +1,3 @@
-from typing import Optional
-
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 import numpy as np
@@ -59,15 +57,14 @@ def deproject_coords(objectCoords, galCenter, galPA, galInc, galDist):
         The deprojected (or galactocentric) position angle of the objects in the
         frame of the plane of the galaxy.
     """
-
     objectCoords = __convert_objectCoords(objectCoords)
-    galCenter = __covert_galCenter(galCenter)
+    galCenter = __convert_galCenter(galCenter)
     galPA = galPA.to(u.deg)
     galInc = galInc.to(u.deg)
     galDist = galDist.to(u.pc)
 
     # Conversion factor from angular separation to physical separation in the plane of the sky
-    phyCon = galDist.to(u.pc) / (206265*u.arcsec).to(u.deg)
+    phyCon = galDist / (206265*u.arcsec).to(u.deg)
 
     # Find the physical separation between the galaxy center and the objects' coordinates in the plane of the sky
     sky_sep = galCenter.separation(objectCoords) * phyCon
@@ -77,15 +74,15 @@ def deproject_coords(objectCoords, galCenter, galPA, galInc, galDist):
     # These are the x and y coordinates of the objects in the plane of the sky
     # treating the galaxy center as the origin, and the major axis of the galaxy as the 
     # x-axis, and the minor axis of the galaxy as the y-axis.
-    sky_x = sky_sep * np.cos(sky_ang.to(u.radian))
-    sky_y = sky_sep * np.sin(sky_ang.to(u.radian))
+    sky_x = sky_sep * np.cos(sky_ang)
+    sky_y = sky_sep * np.sin(sky_ang)
 
     # Now we apply the rotation matrix on the sky coordinates to get the coordinates into the frame
     # of the plane of the galaxy. The rotation is by the negative of the position angle of the galaxy 
     # because we want to rotate the coordinates in the opposite direction of the galaxy's rotation 
     # to get them into the frame of the galaxy.
-    x_rot    =  sky_x * np.cos(-galPA.to(u.radian)) - sky_y * np.sin(-galPA.to(u.radian))
-    y_rot    =  sky_x * np.sin(-galPA.to(u.radian)) + sky_y * np.cos(-galPA.to(u.radian))
+    x_rot    =  sky_x * np.cos(-galPA) - sky_y * np.sin(-galPA)
+    y_rot    =  sky_x * np.sin(-galPA) + sky_y * np.cos(-galPA)
 
     # Now we deproject from the oval projections of the galaxy on the plane of the sky to 
     # the assumed circular projection of the galaxy within its own frame.
@@ -93,7 +90,7 @@ def deproject_coords(objectCoords, galCenter, galPA, galInc, galDist):
     # inclination angle of the galaxy to account for the fact that the galaxy is tilted 
     # with respect to our line of sight.
     x_disk = x_rot
-    y_disk = y_rot/np.cos(galInc.to(u.radian))
+    y_disk = y_rot/np.cos(galInc)
 
     # Now, we can find the deprojected (or galactocentric) radius and position angle of the objects
     # in the fram of the plane of the galaxy.
@@ -106,32 +103,41 @@ def deproject_coords(objectCoords, galCenter, galPA, galInc, galDist):
 @u.quantity_input(objectRadii=u.pc, objectAngle=u.deg, galPA=u.deg, galInc=u.deg, galDist=u.pc)
 def project_coords(objectRadii, objectAngle, galCenter, galPA, galInc, galDist):
     """
-    Function to convert the galactocentric radius and position angle of an object or list of
-    objects in the frame of the plane of the galaxy to RA and Dec coordinates in the plane of the sky, 
-    given the coordinates of the galaxy center, the position angle of the galaxy, 
-    the inclination of the galaxy, and the distance to the galaxy. The function returns 
+    Function to convert the galactocentric radius and position 
+    angle of an object or list of objects in the frame of the 
+    plane of the galaxy to RA and Dec coordinates in the plane 
+    of the sky, given the coordinates of the galaxy center, 
+    the position angle of the galaxy, the inclination of the 
+    galaxy, and the distance to the galaxy. The function returns 
     the RA and Dec coordinates of the objects in the plane of the sky.
 
     Parameters:
     -----------
     objectRadii : u.Quantity (distance)
-        The galactocentric radius of the object(s) in the frame of the plane of the galaxy.
+        The galactocentric radius of the object(s) in the frame 
+        of the plane of the galaxy.
     objectAngle : u.Quantity (angle)
-        The galactocentric position angle of the object(s) in the frame of the plane of the galaxy. 
-        This is the angle between the north direction and the line connecting the galaxy center to
-        the object, measured counterclockwise from the north direction.
+        The galactocentric position angle of the object(s) in 
+        the frame of the plane of the galaxy. This is the angle 
+        between the north direction and the line connecting the 
+        galaxy center to the object, measured counterclockwise 
+        from the north direction.
     galCenter : SkyCoord or list_like
-        The coordinates of the galaxy center. This can be a single SkyCoord object, a list of u.Quantity 
-        objects, a list of numbers with shape (2,), or a u.Quantity object with shape (2,). If the 
-        input is a list of u.Quantity objects or a list of numbers, then the first list is assumed to be 
-        the RA and the second list is assumed to be the Dec. Any numbers inputted that are not a u.Quantity 
-        object are assumed to be in degrees.
+        The coordinates of the galaxy center. This can be a 
+        single SkyCoord object, a list of u.Quantity objects, 
+        a list of numbers with shape (2,), or a u.Quantity 
+        object with shape (2,). If the input is a list of 
+        u.Quantity objects or a list of numbers, then the 
+        first list is assumed to be the RA and the second 
+        list is assumed to be the Dec. Any numbers inputted 
+        that are not a u.Quantity object are assumed to be in degrees.
     galPA : u.Quantity (angle)
-        The position angle of the galaxy. This is the angle between the north direction and the major
-        axis of the galaxy, measured counterclockwise from the north direction.
+        The position angle of the galaxy. This is the angle 
+        between the north direction and the major axis of the galaxy, 
+        measured counterclockwise from the north direction.
     galInc : u.Quantity (angle)
-        The inclination of the galaxy. This is the angle between the plane of the galaxy and the
-        line of sight.
+        The inclination of the galaxy. This is the angle 
+        between the plane of the galaxy and the line of sight.
     galDist : u.Quantity (distance)
         The distance to the galaxy.
 
@@ -145,13 +151,13 @@ def project_coords(objectRadii, objectAngle, galCenter, galPA, galInc, galDist):
 
     objectRadii = objectRadii.to(u.pc)
     objectAngle = objectAngle.to(u.deg)
-    galCenter = __covert_galCenter(galCenter)
+    galCenter = __convert_galCenter(galCenter)
     galPA = galPA.to(u.deg)
     galInc = galInc.to(u.deg)
     galDist = galDist.to(u.pc)
 
     # Conversion factor from angular separation to physical separation in the plane of the sky
-    phyCon = galDist.to(u.pc) / (206265*u.arcsec).to(u.deg)
+    phyCon = galDist / (206265*u.arcsec).to(u.deg)
 
     # First we need to convert the galactocentric radius and position angle of the objects 
     # in the frame of the plane of the galaxy to x and y coordinates in the plane of the galaxy. 
@@ -159,14 +165,14 @@ def project_coords(objectRadii, objectAngle, galCenter, galPA, galInc, galDist):
     # and the y coordinate is along the minor axis of the galaxy.
     # Y coordinate is multipled by the cosine of the inclination angle of the galaxy to account
     # for the fact that the galaxy is tilted with respect to our line of sight.
-    x_disk = objectRadii * np.cos(objectAngle.to(u.radian))
-    y_disk = objectRadii * np.sin(objectAngle.to(u.radian)) * np.cos(galInc.to(u.radian))
+    x_disk = objectRadii * np.cos(objectAngle)
+    y_disk = objectRadii * np.sin(objectAngle) * np.cos(galInc)
 
     # Now we apply the inverse of the rotation matrix on the disk coordinates to get the coordinates 
     # into the frame of the plane of the sky. The rotation is by the position angle of the galaxy 
     # to get them into the plane of the sky.
-    x_rot = x_disk * np.cos(galPA.to(u.radian)) - y_disk * np.sin(galPA.to(u.radian))
-    y_rot = x_disk * np.sin(galPA.to(u.radian)) + y_disk * np.cos(galPA.to(u.radian))
+    x_rot = x_disk * np.cos(galPA) - y_disk * np.sin(galPA)
+    y_rot = x_disk * np.sin(galPA) + y_disk * np.cos(galPA)
 
     # Now we can find the separation and position angle of the objects with respect to the galaxy center 
     # in the plane of the sky, and then convert those to RA and Dec coordinates.
@@ -256,7 +262,7 @@ def __convert_objectCoords(objectCoords):
     
     return coords
 
-def __covert_galCenter(galCenter):
+def __convert_galCenter(galCenter):
     #The galaxy center can be a SkyCoord object, a list of u.Quantity objects, a list of numbers, or a u.Quantity object.
     #We need to convert it to a SkyCoord object.
 
